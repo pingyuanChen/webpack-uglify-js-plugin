@@ -42,14 +42,13 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
       });
     }
     compilation.plugin("optimize-chunk-assets", function(chunks, callback) {
-      var cacheUglifyFolder = path.resolve(__dirname, options.cacheFolder+'/'+CACHED_UGLIFY_JS_FOLDER),
-        mTimeRecordsFile = path.resolve(__dirname, options.cacheFolder+'/'+M_TIME_FILE);
-      var mTimeRecords, cacheUglifyFiles = [],
+      var cacheUglifyFolder = options.cacheFolder+'/'+CACHED_UGLIFY_JS_FOLDER,
+        mTimeRecordsFile = options.cacheFolder+'/'+M_TIME_FILE;
+      var mTimeRecords,
         changedChunks = [], changedFiles = [],
         unChangedChunks = [], unChangedFiles = [];
 
       if(fileUtils.exists(cacheUglifyFolder) && fileUtils.exists(mTimeRecordsFile)) {
-        // cacheUglifyFiles = fileUtils.getFilesInDirectory(cacheUglifyFolder);
         try {
           mTimeRecords = JSON.parse(fileUtils.read(mTimeRecordsFile));
         }catch(e) {
@@ -79,6 +78,8 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
 
           fileUtils.write(mTimeRecords);
         }
+      }else {
+        changedChunks = chunks;
       }
 
       var files = getFilesFromChunks(changedChunks);
