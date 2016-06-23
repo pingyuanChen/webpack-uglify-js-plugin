@@ -28,16 +28,12 @@ function UglifyJsPlugin(options) {
     options.compress = options.compressor;
   }
   this.options = options;
-  this.log = function(logInfo) {
-    if(this.options.debug) {
-      console.log(logInfo);
-    }
-  }
 }
 module.exports = UglifyJsPlugin;
 
 UglifyJsPlugin.prototype.apply = function(compiler) {
-  var options = this.options;
+  var options = this.options, 
+    log = this.log.bind(this);
   options.test = options.test || /\.js($|\?)/i;
 
   var requestShortener = new RequestShortener(compiler.context);
@@ -87,8 +83,8 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
       });
 
 
-      this.log('changedChunks: \n'+changedChunksName.join('\n'));
-      this.log('unChangedChunks: \n'+unChangedChunksName.join('\n'));
+      log('changedChunks: '+chalk.red.bold(changedChunks.length)+'\n'+chalk.green(changedChunksName.join('\n')));
+      log('unChangedChunks: '+chalk.red.bold(unChangedChunksName.length)+'\n'+chalk.green(unChangedChunksName.join('\n')));
 
       fileUtils.write(mTimeRecordsFile, JSON.stringify(mTimeRecords));
 
@@ -215,6 +211,12 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
       context.minimize = true;
     });
   });
+};
+
+UglifyJsPlugin.prototype.log = function(logInfo) {
+  if(this.options.debug) {
+    console.log(logInfo);
+  }
 };
 
 function getFilesFromChunks(chunks) {
