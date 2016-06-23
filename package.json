@@ -1,0 +1,28 @@
+{
+  "name": "webpack-uglify-js-plugin",
+  "version": "1.0.0",
+  "description": "Incremental Uglify JS for webpack",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pingyuanChen/webpack-uglify-js-plugin.git"
+  },
+  "keywords": [
+    "webpack",
+    "plugin",
+    "uglifyjs"
+  ],
+  "author": "pychen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pingyuanChen/webpack-uglify-js-plugin/issues"
+  },
+  "homepage": "https://github.com/pingyuanChen/webpack-uglify-js-plugin",
+  "dependencies": {
+    "uglify-js": "^2.6.4",
+    "webpack-core": "^0.6.8"
+  }
+}
