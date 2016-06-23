@@ -1,6 +1,6 @@
 {
   "name": "webpack-uglify-js-plugin",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "Incremental Uglify JS for webpack",
   "main": "index.js",
   "scripts": {

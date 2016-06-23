@@ -28,6 +28,11 @@ function UglifyJsPlugin(options) {
     options.compress = options.compressor;
   }
   this.options = options;
+  this.log = function(logInfo) {
+    if(this.options.debug) {
+      console.log(logInfo);
+    }
+  }
 }
 module.exports = UglifyJsPlugin;
 
@@ -211,13 +216,6 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
     });
   });
 };
-
-UglifyJsPlugin.prototype.log = function(logInfo) {
-  if(this.options.debug) {
-    console.log(logInfo);
-  }
-}
-
 
 function getFilesFromChunks(chunks) {
   var files = [];
