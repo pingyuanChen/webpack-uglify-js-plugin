@@ -48,39 +48,33 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         changedChunks = [], changedFiles = [],
         unChangedChunks = [], unChangedFiles = [];
 
-      if(fileUtils.exists(cacheUglifyFolder) && fileUtils.exists(mTimeRecordsFile)) {
-        try {
-          mTimeRecords = JSON.parse(fileUtils.read(mTimeRecordsFile));
-        }catch(e) {
-          mTimeRecords = {};
-        }
-
-        if(Object.keys(mTimeRecords).length > 0) {
-          chunks.forEach(function(chunk) {
-            var _modules = chunk.modules,
-              isChanged = false;
-            _modules.forEach(function(_module) {
-              var modulePath = _module.resource,
-                moduleStat = fs.statSync(modulePath),
-                moduleStatMTime = moduleStat.mtime;
-              if(moduleStatMTime !== mTimeRecords[modulePath]) {
-                isChanged = true;
-                mTimeRecords[modulePath] = moduleStatMTime
-              }
-            });
-
-            if(isChanged) {
-              changedChunks.push(chunk);
-            } else {
-              unChangedChunks.push(chunk);
-            }
-          });
-
-          fileUtils.write(mTimeRecords);
-        }
-      }else {
-        changedChunks = chunks;
+      try {
+        mTimeRecords = JSON.parse(fileUtils.read(mTimeRecordsFile));
+      }catch(e) {
+        mTimeRecords = {};
       }
+
+      chunks.forEach(function(chunk) {
+        var _modules = chunk.modules,
+          isChanged = false;
+        _modules.forEach(function(_module) {
+          var modulePath = _module.resource,
+            moduleStat = fs.statSync(modulePath),
+            moduleStatMTime = moduleStat.mtime;
+          if(moduleStatMTime !== mTimeRecords[modulePath]) {
+            isChanged = true;
+            mTimeRecords[modulePath] = moduleStatMTime
+          }
+        });
+
+        if(isChanged) {
+          changedChunks.push(chunk);
+        } else {
+          unChangedChunks.push(chunk);
+        }
+      });
+
+      fileUtils.write(mTimeRecords);
 
       var files = getFilesFromChunks(changedChunks);
 
