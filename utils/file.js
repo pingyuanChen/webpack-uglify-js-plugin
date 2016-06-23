@@ -1,6 +1,7 @@
 // Nodejs libs.
 var fs = require('fs');
 var path = require('path');
+var chalk = require('chalk');
 
 // The module to be exported.
 var file = module.exports = {};
@@ -55,10 +56,10 @@ file.write = function(filepath, contents) {
     }
     // Actually write file.
     fs.writeFileSync(filepath, contents);
-    console.log('Write "'+filepath+'" successful');
+    console.log('Write "'+chalk.green(filepath)+'" successful');
     return true;
   } catch(e) {
-    console.error('Unable to write "' + filepath + '" file (Error code: ' + e.code + ').');
+    console.error('Unable to write "' + chalk.red.bold(filepath) + '" file (Error code: ' + e.code + ').');
   }
 };
 
