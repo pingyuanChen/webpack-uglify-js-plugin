@@ -58,8 +58,11 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         var _modules = chunk.modules,
           isChanged = false;
         _modules.forEach(function(_module) {
-          var modulePath = _module.resource,
-            moduleStat = fs.statSync(modulePath),
+          var modulePath = _module.resource;
+          if(!modulePath) {
+            return;
+          }
+          var moduleStat = fs.statSync(modulePath),
             moduleStatMTime = moduleStat.mtime;
           if(moduleStatMTime !== mTimeRecords[modulePath]) {
             isChanged = true;
@@ -74,7 +77,7 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         }
       });
 
-      fileUtils.write(mTimeRecords);
+      fileUtils.write(mTimeRecordsFile, mTimeRecords);
 
       var files = getFilesFromChunks(changedChunks);
 
@@ -90,7 +93,6 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         });
       }
       
-
       compilation.additionalChunkAssets.forEach(function(file) {
         files.push(file);
       });

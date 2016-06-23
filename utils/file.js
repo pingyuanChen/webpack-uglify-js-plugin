@@ -54,6 +54,9 @@ file.write = function(filepath, contents) {
       contents = new Buffer(contents);
     }
     // Actually write file.
+    if(!file.exists(filepath)){
+      fs.mkdirSync(subpath, parseInt('0777', 8) & (~process.umask()));
+    }
     fs.writeFileSync(filepath, contents);
     console.log('Write "'+filepath+'" successful');
     return true;
