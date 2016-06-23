@@ -36,7 +36,7 @@ file.read = function(filepath) {
   var contents;
   try {
     contents = fs.readFileSync(String(filepath)).toString();
-    console.log('Reading "' + filepath + '" successful');
+    // console.log('Reading "' + filepath + '" successful');
     return contents;
   } catch(e) {
     console.error('Unable to read "' + filepath + '" file (Error code: ' + e.code + ').');
@@ -54,9 +54,6 @@ file.write = function(filepath, contents) {
       contents = new Buffer(contents);
     }
     // Actually write file.
-    if(!file.exists(filepath)){
-      fs.mkdirSync(subpath, parseInt('0777', 8) & (~process.umask()));
-    }
     fs.writeFileSync(filepath, contents);
     console.log('Write "'+filepath+'" successful');
     return true;

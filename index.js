@@ -3,12 +3,13 @@
 */
 var path = require('path');
 var fs = require('fs');
+var chalk = require('chalk');
+var uglify = require("uglify-js");
 var SourceMapConsumer = require("webpack-core/lib/source-map").SourceMapConsumer;
 var SourceMapSource = require("webpack-core/lib/SourceMapSource");
 var RawSource = require("webpack-core/lib/RawSource");
 var RequestShortener = require("./utils/RequestShortener");
 var ModuleFilenameHelpers = require("./utils/ModuleFilenameHelpers");
-var uglify = require("uglify-js");
 var fileUtils = require('./utils/file');
 
 
@@ -19,6 +20,7 @@ function UglifyJsPlugin(options) {
   if(typeof options !== "object") options = {};
 
   if(options.cacheFolder === undefined) {
+    console.error(chalk.bold.red('cacheFolder parameter must be required!'))
     return;
   }
 
@@ -45,8 +47,8 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
       var cacheUglifyFolder = options.cacheFolder+'/'+CACHED_UGLIFY_JS_FOLDER,
         mTimeRecordsFile = options.cacheFolder+'/'+M_TIME_FILE;
       var mTimeRecords,
-        changedChunks = [], changedFiles = [],
-        unChangedChunks = [], unChangedFiles = [];
+        changedChunks = [], changedFiles = [], changedChunksName = [],
+        unChangedChunks = [], unChangedFiles = [], unChangedChunksName = [];
 
       try {
         mTimeRecords = JSON.parse(fileUtils.read(mTimeRecordsFile));
@@ -63,7 +65,7 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
             return;
           }
           var moduleStat = fs.statSync(modulePath),
-            moduleStatMTime = moduleStat.mtime;
+            moduleStatMTime = moduleStat.mtime.getTime();
           if(moduleStatMTime !== mTimeRecords[modulePath]) {
             isChanged = true;
             mTimeRecords[modulePath] = moduleStatMTime
@@ -72,12 +74,18 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
 
         if(isChanged) {
           changedChunks.push(chunk);
+          changedChunksName.push(chunk.name);
         } else {
           unChangedChunks.push(chunk);
+          unChangedChunksName.push(chunk.name);
         }
       });
 
-      fileUtils.write(mTimeRecordsFile, mTimeRecords);
+
+      this.log('changedChunks: \n'+changedChunksName.join('\n'));
+      this.log('unChangedChunks: \n'+unChangedChunksName.join('\n'));
+
+      fileUtils.write(mTimeRecordsFile, JSON.stringify(mTimeRecords));
 
       var files = getFilesFromChunks(changedChunks);
 
@@ -203,6 +211,12 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
     });
   });
 };
+
+UglifyJsPlugin.prototype.log = function(logInfo) {
+  if(this.options.debug) {
+    console.log(logInfo);
+  }
+}
 
 
 function getFilesFromChunks(chunks) {
