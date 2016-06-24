@@ -57,7 +57,7 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         mTimeRecords = {};
       }
 
-      log('changedModules: ');
+      // log('changedModules: ');
 
       chunks.forEach(function(chunk) {
         var _modules = chunk.modules,
@@ -70,7 +70,7 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
           var moduleStat = fs.statSync(modulePath),
             moduleStatMTime = moduleStat.mtime.getTime();
           if(moduleStatMTime !== mTimeRecords[modulePath]) {
-            log(chalk.green(modulePath)+' before:'+chalk.red.bold(mTimeRecords[modulePath])+', after:'+chalk.red.bold(moduleStatMTime));
+            // log(chalk.green(modulePath)+' before:'+chalk.red.bold(mTimeRecords[modulePath])+', after:'+chalk.red.bold(moduleStatMTime));
             isChanged = true;
             mTimeRecords[modulePath] = moduleStatMTime
           }
@@ -205,7 +205,9 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
           uglify.AST_Node.warn_function = oldWarnFunction; // eslint-disable-line camelcase
 
           var toBeCachedJS = file.replace(compilation.hash, '');
-          fileUtils.write(cacheUglifyFolder + '/' + toBeCachedJS, asset.__UglifyJsPlugin._value);
+          if(asset.__UglifyJsPlugin && asset.__UglifyJsPlugin._value) {
+            fileUtils.write(cacheUglifyFolder + '/' + toBeCachedJS, asset.__UglifyJsPlugin._value);
+          }
         }
       });
       callback();
