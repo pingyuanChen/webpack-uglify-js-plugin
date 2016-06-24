@@ -57,6 +57,8 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         mTimeRecords = {};
       }
 
+      log('changedModules: ');
+
       chunks.forEach(function(chunk) {
         var _modules = chunk.modules,
           isChanged = false;
@@ -68,6 +70,7 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
           var moduleStat = fs.statSync(modulePath),
             moduleStatMTime = moduleStat.mtime.getTime();
           if(moduleStatMTime !== mTimeRecords[modulePath]) {
+            log(chalk.green(modulePath)+' before:'+chalk.red.bold(mTimeRecords[modulePath])+', after:'+chalk.red.bold(moduleStatMTime));
             isChanged = true;
             mTimeRecords[modulePath] = moduleStatMTime
           }
