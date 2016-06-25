@@ -13,7 +13,7 @@ var ModuleFilenameHelpers = require("./utils/ModuleFilenameHelpers");
 var fileUtils = require('./utils/file');
 
 
-var M_TIME_FILE = 'm_time_record.json';
+var M_TIME_FILE = 'm_time_record';
 var CACHED_UGLIFY_JS_FOLDER = 'cached_uglify';
 
 function UglifyJsPlugin(options) {
@@ -27,6 +27,8 @@ function UglifyJsPlugin(options) {
   if(typeof options.compressor !== "undefined") {
     options.compress = options.compressor;
   }
+
+  options.mTimeFileName = options.mTimeFileName || M_TIME_FILE;
   this.options = options;
 }
 module.exports = UglifyJsPlugin;
@@ -46,7 +48,7 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
     }
     compilation.plugin("optimize-chunk-assets", function(chunks, callback) {
       var cacheUglifyFolder = options.cacheFolder+'/'+CACHED_UGLIFY_JS_FOLDER,
-        mTimeRecordsFile = options.cacheFolder+'/'+M_TIME_FILE;
+        mTimeRecordsFile = options.cacheFolder+'/'+options.mTimeFileName+'.json';
       var mTimeRecords,
         changedChunks = [], changedFiles = [], changedChunksName = [],
         unChangedChunks = [], unChangedFiles = [], unChangedChunksName = [];
