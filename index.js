@@ -100,7 +100,7 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         unChangedFiles.forEach(function(unChangedFile) {
           var unChangedFilePath = cacheUglifyFolder + '/' + unChangedFile.replace(compilation.hash, '');
           if(fileUtils.exists(unChangedFilePath)) {
-            compilation[unChangedFile] = new RawSource(fileUtils.read(unChangedFilePath));
+            compilation.assets[unChangedFile] = new RawSource(fileUtils.read(unChangedFilePath));
           }else {
             files.push(unChangedFile);
           }
