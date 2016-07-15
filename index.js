@@ -70,7 +70,7 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         _modules.forEach(function(_module) {
           var modulePath = _module.resource;
           if(!modulePath) {
-            isChanged = true
+            // isChanged = true
             return;
           }
           var moduleStat = fs.statSync(modulePath),

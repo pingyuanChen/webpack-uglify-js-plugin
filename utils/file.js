@@ -50,6 +50,10 @@ file.readAndReplace = function(filepath, src, replaceStr) {
   try {
     contents = fs.readFileSync(String(filepath)).toString();
     contents = contents.replace(src, replaceStr);
+
+    // Actually write file.
+    fs.writeFileSync(filepath, contents);
+    console.log('Write "'+chalk.green(filepath)+'" successful');
     return contents;
   } catch(e) {
     console.error('Unable to read "' + filepath + '" file (Error code: ' + e.code + ').');
