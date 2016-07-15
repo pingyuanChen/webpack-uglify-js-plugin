@@ -44,6 +44,18 @@ file.read = function(filepath) {
   }
 };
 
+
+file.readAndReplace = function(filepath, src, replaceStr) {
+  var contents;
+  try {
+    contents = fs.readFileSync(String(filepath)).toString();
+    contents = contents.replace(src, replaceStr);
+    return contents;
+  } catch(e) {
+    console.error('Unable to read "' + filepath + '" file (Error code: ' + e.code + ').');
+  }
+};
+
 // Write a file.
 file.write = function(filepath, contents) {
   // Create path, if necessary.

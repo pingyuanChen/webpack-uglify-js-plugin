@@ -51,7 +51,8 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         mTimeRecordsFile = options.cacheFolder+'/'+options.mTimeFileName+'.json';
       var mTimeRecords,
         changedChunks = [], changedFiles = [], changedChunksName = [],
-        unChangedChunks = [], unChangedFiles = [], unChangedChunksName = [];
+        unChangedChunks = [], unChangedFiles = [], unChangedChunksName = [],
+        newMTimeRecords = {};
 
       try {
         mTimeRecords = JSON.parse(fileUtils.read(mTimeRecordsFile));
@@ -59,22 +60,25 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         mTimeRecords = {};
       }
 
-      // log('changedModules: ');
+      if(!mTimeRecords.lastHash) { //兼容
+        fileUtils.deleteDirectory(options.cacheFolder);
+      }
 
       chunks.forEach(function(chunk) {
-        var _modules = chunk.modules,
+        var _modules = chunk.modules || [],
           isChanged = false;
         _modules.forEach(function(_module) {
           var modulePath = _module.resource;
           if(!modulePath) {
+            isChanged = true
             return;
           }
           var moduleStat = fs.statSync(modulePath),
-            moduleStatMTime = moduleStat.mtime.getTime();
-          if(moduleStatMTime !== mTimeRecords[modulePath]) {
-            // log(chalk.green(modulePath)+' before:'+chalk.red.bold(mTimeRecords[modulePath])+', after:'+chalk.red.bold(moduleStatMTime));
+            moduleStatMTime = moduleStat.mtime.getTime(),
+            lastMTime = mTimeRecords[modulePath];
+          if(!lastMTime || moduleStatMTime !== lastMTime) {
             isChanged = true;
-            mTimeRecords[modulePath] = moduleStatMTime
+            newMTimeRecords[modulePath] = moduleStatMTime
           }
         });
 
@@ -87,20 +91,28 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         }
       });
 
+      mTimeRecords = Object.assign(mTimeRecords, newMTimeRecords);
+
 
       log('changedChunks: '+chalk.red.bold(changedChunks.length)+'\n'+chalk.green(changedChunksName.join('\n')));
       log('unChangedChunks: '+chalk.red.bold(unChangedChunksName.length)+'\n'+chalk.green(unChangedChunksName.join('\n')));
 
-      fileUtils.write(mTimeRecordsFile, JSON.stringify(mTimeRecords));
-
-      var files = getFilesFromChunks(changedChunks);
+      var files = getFilesFromChunks(changedChunks),
+        isHashChanged = false;
 
       if(unChangedChunks.length > 0) {
+        isHashChanged = compilation.hash !== mTimeRecords.lastHash;
         unChangedFiles = getFilesFromChunks(unChangedChunks);
         unChangedFiles.forEach(function(unChangedFile) {
-          var unChangedFilePath = cacheUglifyFolder + '/' + unChangedFile.replace(compilation.hash, '');
+          var unChangedFilePath = cacheUglifyFolder + '/' + unChangedFile.replace(compilation.hash, ''),
+            replacedContent;
           if(fileUtils.exists(unChangedFilePath)) {
-            compilation.assets[unChangedFile] = new RawSource(fileUtils.read(unChangedFilePath));
+            if(isHashChanged){
+              replacedContent = fileUtils.readAndReplace(unChangedFilePath, new RegExp(mTimeRecords.lastHash), compilation.hash);
+            }else{
+              replacedContent = fileUtils.read(unChangedFilePath);
+            }
+            compilation.assets[unChangedFile] = new RawSource(replacedContent);
           }else {
             files.push(unChangedFile);
           }
@@ -212,6 +224,10 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
           }
         }
       });
+      
+      mTimeRecords.lastHash = compilation.hash;
+      fileUtils.write(mTimeRecordsFile, JSON.stringify(mTimeRecords));
+      
       callback();
     });
     compilation.plugin("normal-module-loader", function(context) {
