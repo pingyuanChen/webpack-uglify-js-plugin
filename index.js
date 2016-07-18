@@ -66,28 +66,54 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
 
       chunks.forEach(function(chunk) {
         var _modules = chunk.modules || [],
-          isChanged = false;
-        _modules.forEach(function(_module) {
-          var modulePath = _module.resource;
-          if(!modulePath) {
-            // isChanged = true
-            return;
-          }
-          var moduleStat = fs.statSync(modulePath),
-            moduleStatMTime = moduleStat.mtime.getTime(),
-            lastMTime = mTimeRecords[modulePath];
-          if(!lastMTime || moduleStatMTime !== lastMTime) {
-            isChanged = true;
-            newMTimeRecords[modulePath] = moduleStatMTime
-          }
-        });
+          isChanged = false,
+          chunkName = chunk.name,
+          isInChanged = changedChunksName.indexOf(chunkName) > -1,
+          chunkParents = chunk.parents,
+          chunkParentsItem;
+
+        if(isInChanged){
+          isChanged = true;
+        }else{
+          _modules.forEach(function(_module) {
+            var modulePath = _module.resource;
+            if(!modulePath) {
+              // isChanged = true
+              return;
+            }
+            var moduleStat = fs.statSync(modulePath),
+              moduleStatMTime = moduleStat.mtime.getTime(),
+              lastMTime = mTimeRecords[modulePath];
+            if(!lastMTime || moduleStatMTime !== lastMTime) {
+              isChanged = true;
+              newMTimeRecords[modulePath] = moduleStatMTime
+            }
+          });
+        }
 
         if(isChanged) {
           changedChunks.push(chunk);
-          changedChunksName.push(chunk.name);
+          changedChunksName.push(chunkName);
+          if(chunkParents.length > 0){
+            //process parents chunks
+            for(var i=0,l=chunkParents.length; i<l; i++) {
+              chunkParentsItem = chunkParents[i],
+              unChangedChunksIndex = unChangedChunksName.indexOf(chunkParentsItem.name);
+              changedChunksIndex = changedChunks.indexOf(chunkParentsItem.name);
+              if(unChangedChunksIndex > -1) {
+                unChangedChunks.splice(unChangedChunksIndex, 1);
+                unChangedChunksName.splice(unChangedChunksIndex, 1);
+              }
+
+              if(changedChunksIndex === -1) {
+                changedChunks.push(chunkParentsItem);
+                changedChunksName.push(chunkParentsItem.name);
+              }
+            }
+          }
         } else {
           unChangedChunks.push(chunk);
-          unChangedChunksName.push(chunk.name);
+          unChangedChunksName.push(chunkName);
         }
       });
 
