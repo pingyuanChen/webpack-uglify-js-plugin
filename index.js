@@ -70,7 +70,7 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
           chunkName = chunk.name,
           isInChanged = changedChunksName.indexOf(chunkName) > -1,
           chunkParents = chunk.parents,
-          chunkParentsItem;
+          chunkParentsItem, unChangedChunksIndex, changedChunksIndex;
 
         if(isInChanged){
           isChanged = true;
@@ -92,22 +92,24 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         }
 
         if(isChanged) {
-          changedChunks.push(chunk);
-          changedChunksName.push(chunkName);
+          if(changedChunksName.indexOf(chunkName) === -1){
+            changedChunks.push(chunk);
+            changedChunksName.push(chunkName);
+          }
           if(chunkParents.length > 0){
             //process parents chunks
             for(var i=0,l=chunkParents.length; i<l; i++) {
-              chunkParentsItem = chunkParents[i],
+              chunkParentsItem = chunkParents[i];
               unChangedChunksIndex = unChangedChunksName.indexOf(chunkParentsItem.name);
-              changedChunksIndex = changedChunks.indexOf(chunkParentsItem.name);
-              if(unChangedChunksIndex > -1) {
-                unChangedChunks.splice(unChangedChunksIndex, 1);
-                unChangedChunksName.splice(unChangedChunksIndex, 1);
-              }
-
+              changedChunksIndex = changedChunksName.indexOf(chunkParentsItem.name);
               if(changedChunksIndex === -1) {
                 changedChunks.push(chunkParentsItem);
                 changedChunksName.push(chunkParentsItem.name);
+              }
+
+              if(unChangedChunksIndex > -1) {
+                unChangedChunks.splice(unChangedChunksIndex, 1);
+                unChangedChunksName.splice(unChangedChunksIndex, 1);
               }
             }
           }
