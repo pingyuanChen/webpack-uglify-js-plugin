@@ -10,10 +10,9 @@ var SourceMapSource = require("webpack-core/lib/SourceMapSource");
 var RawSource = require("webpack-core/lib/RawSource");
 var RequestShortener = require("./utils/RequestShortener");
 var ModuleFilenameHelpers = require("./utils/ModuleFilenameHelpers");
+var genHash = require('./utils/genHash');
 var fileUtils = require('./utils/file');
 
-
-var M_TIME_FILE = 'm_time_record';
 var CACHED_UGLIFY_JS_FOLDER = 'cached_uglify';
 
 function UglifyJsPlugin(options) {
@@ -28,18 +27,18 @@ function UglifyJsPlugin(options) {
     options.compress = options.compressor;
   }
 
-  options.mTimeFileName = options.mTimeFileName || M_TIME_FILE;
   this.options = options;
 }
 module.exports = UglifyJsPlugin;
 
 UglifyJsPlugin.prototype.apply = function(compiler) {
-  var options = this.options, 
+  var options = this.options,
     log = this.log.bind(this);
   options.test = options.test || /\.js($|\?)/i;
 
   var requestShortener = new RequestShortener(compiler.context);
   compiler.plugin("compilation", function(compilation) {
+    debugger;
     if(options.sourceMap !== false) {
       compilation.plugin("build-module", function(module) {
         // to get detailed location info about errors
@@ -48,114 +47,38 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
     }
     compilation.plugin("optimize-chunk-assets", function(chunks, callback) {
       var cacheUglifyFolder = options.cacheFolder+'/'+CACHED_UGLIFY_JS_FOLDER,
-        mTimeRecordsFile = options.cacheFolder+'/'+options.mTimeFileName+'.json';
-      var mTimeRecords,
-        changedChunks = [], changedFiles = [], changedChunksName = [],
-        unChangedChunks = [], unChangedFiles = [], unChangedChunksName = [],
-        newMTimeRecords = {};
-
-      try {
-        mTimeRecords = JSON.parse(fileUtils.read(mTimeRecordsFile));
-      }catch(e) {
-        mTimeRecords = {};
-      }
-
-      if(!mTimeRecords.lastHash) { //兼容
-        fileUtils.deleteDirectory(options.cacheFolder);
-      }
-
+        compileHash = compilation.hash,
+        changedChunks = [], unChangedChunks = [];
+      debugger;
+      var files = [];
       chunks.forEach(function(chunk) {
-        var _modules = chunk.modules || [],
-          isChanged = false,
-          chunkName = chunk.name,
-          isInChanged = changedChunksName.indexOf(chunkName) > -1,
-          chunkParents = chunk.parents,
-          chunkParentsItem, unChangedChunksIndex, changedChunksIndex;
-
-        if(isInChanged){
-          isChanged = true;
-        }else{
-          _modules.forEach(function(_module) {
-            var modulePath = _module.resource;
-            if(!modulePath) {
-              // isChanged = true
-              return;
-            }
-            var moduleStat = fs.statSync(modulePath),
-              moduleStatMTime = moduleStat.mtime.getTime(),
-              lastMTime = mTimeRecords[modulePath];
-            if(!lastMTime || moduleStatMTime !== lastMTime) {
-              isChanged = true;
-              newMTimeRecords[modulePath] = moduleStatMTime
-            }
-          });
-        }
-
-        if(isChanged) {
-          if(changedChunksName.indexOf(chunkName) === -1){
-            changedChunks.push(chunk);
-            changedChunksName.push(chunkName);
-          }
-          if(chunkParents.length > 0){
-            //process parents chunks
-            for(var i=0,l=chunkParents.length; i<l; i++) {
-              chunkParentsItem = chunkParents[i];
-              unChangedChunksIndex = unChangedChunksName.indexOf(chunkParentsItem.name);
-              changedChunksIndex = changedChunksName.indexOf(chunkParentsItem.name);
-              if(changedChunksIndex === -1) {
-                changedChunks.push(chunkParentsItem);
-                changedChunksName.push(chunkParentsItem.name);
-              }
-
-              if(unChangedChunksIndex > -1) {
-                unChangedChunks.splice(unChangedChunksIndex, 1);
-                unChangedChunksName.splice(unChangedChunksIndex, 1);
-              }
-            }
-          }
-        } else {
-          unChangedChunks.push(chunk);
-          unChangedChunksName.push(chunkName);
-        }
-      });
-
-      mTimeRecords = Object.assign(mTimeRecords, newMTimeRecords);
-
-
-      log('changedChunks: '+chalk.red.bold(changedChunks.length)+'\n'+chalk.green(changedChunksName.join('\n')));
-      log('unChangedChunks: '+chalk.red.bold(unChangedChunksName.length)+'\n'+chalk.green(unChangedChunksName.join('\n')));
-
-      var files = getFilesFromChunks(changedChunks),
-        isHashChanged = false;
-
-      if(unChangedChunks.length > 0) {
-        isHashChanged = compilation.hash !== mTimeRecords.lastHash;
-        unChangedFiles = getFilesFromChunks(unChangedChunks);
-        unChangedFiles.forEach(function(unChangedFile) {
-          var unChangedFilePath = cacheUglifyFolder + '/' + unChangedFile.replace(compilation.hash, ''),
-            replacedContent;
-          if(fileUtils.exists(unChangedFilePath)) {
-            if(isHashChanged){
-              replacedContent = fileUtils.readAndReplace(unChangedFilePath, new RegExp(mTimeRecords.lastHash), compilation.hash);
-            }else{
-              replacedContent = fileUtils.read(unChangedFilePath);
-            }
-            compilation.assets[unChangedFile] = new RawSource(replacedContent);
-          }else {
-            files.push(unChangedFile);
-          }
+        chunk.files.forEach(function(file) {
+          files.push(file);
         });
-      }
-      
+      });
       compilation.additionalChunkAssets.forEach(function(file) {
         files.push(file);
       });
       files = files.filter(ModuleFilenameHelpers.matchObject.bind(undefined, options));
       files.forEach(function(file) {
+        var asset = compilation.assets[file],
+          input, fileHash, curFilePath,
+          cachedContent;
+        input = asset.source();
+        fileHash = genHash(input);
+        curFilePath = cacheUglifyFolder + '/' + file.replace(compilation.hash, '').slice(0, -3) + '.' + fileHash + '.js';
+
+        if (fs.existsSync(curFilePath)) {
+          cachedContent = fs.readFileSync(curFilePath).toString();
+          compilation.assets[file] = new RawSource(cachedContent);
+          unChangedChunks.push(file);
+          return;
+        }
+        changedChunks.push(file);
+
         var oldWarnFunction = uglify.AST_Node.warn_function;
         var warnings = [];
         try {
-          var asset = compilation.assets[file];
           if(asset.__UglifyJsPlugin) {
             compilation.assets[file] = asset.__UglifyJsPlugin;
             return;
@@ -164,10 +87,10 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
             if(asset.sourceAndMap) {
               var sourceAndMap = asset.sourceAndMap();
               var inputSourceMap = sourceAndMap.map;
-              var input = sourceAndMap.source;
+              input = sourceAndMap.source;
             } else {
               var inputSourceMap = asset.map();
-              var input = asset.source();
+              input = asset.source();
             }
             var sourceMap = new SourceMapConsumer(inputSourceMap);
             uglify.AST_Node.warn_function = function(warning) { // eslint-disable-line camelcase
@@ -183,7 +106,6 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
                 "[" + requestShortener.shorten(original.source) + ":" + original.line + "," + original.column + "]");
             };
           } else {
-            var input = asset.source();
             uglify.AST_Node.warn_function = function(warning) { // eslint-disable-line camelcase
               warnings.push(warning);
             };
@@ -246,16 +168,15 @@ UglifyJsPlugin.prototype.apply = function(compiler) {
         } finally {
           uglify.AST_Node.warn_function = oldWarnFunction; // eslint-disable-line camelcase
 
-          var toBeCachedJS = file.replace(compilation.hash, '');
           if(asset.__UglifyJsPlugin && asset.__UglifyJsPlugin._value) {
-            fileUtils.write(cacheUglifyFolder + '/' + toBeCachedJS, asset.__UglifyJsPlugin._value);
+            fileUtils.write(curFilePath, asset.__UglifyJsPlugin._value);
           }
         }
       });
-      
-      mTimeRecords.lastHash = compilation.hash;
-      fileUtils.write(mTimeRecordsFile, JSON.stringify(mTimeRecords));
-      
+
+      log('changedChunks: '+chalk.red.bold(changedChunks.length)+'\n'+chalk.green(changedChunks.join('\n')));
+      log('unChangedChunks: '+chalk.red.bold(unChangedChunks.length)+'\n'+chalk.green(unChangedChunks.join('\n')));
+
       callback();
     });
     compilation.plugin("normal-module-loader", function(context) {
